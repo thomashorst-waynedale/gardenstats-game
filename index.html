@@ -852,9 +852,9 @@ const TROPHY_GLOW={moonsilk:'#e6dcff',azure:'#6ec6ff',silver:'#eef3f6'};
 
 /* ============ STATE ============ */
 const KEY='dataGarden_v2';
-const fresh=()=>({binder:[],cardSeq:0,hood:{},ground:[],bag:8,intro:{step:0},glimpse:{},money:10,earned:0,day:1,size:3,seeds:{daisy:3},items:{},loot:{},grid:Array(25).fill(null),log:[],reg:{},nextId:1,seen:{},last:null,requests:[],reqId:1,done:0,trophies:{},got:{},cafe:[],custId:1,hearts:{},acorns:{},exam:{done:{},lock:{}},today:{},hints:{},talkLock:{},park:[],evid:{},lessons:{},judged:{compare:0,trend:0},quests:[],questCool:{},callLog:[],qid:0,shiny:{},decor:[],ribbons:[],guess:null,guessStreak:0,lastGuess:null,special:null,custom:[],cid:0,photos:{},madeCustom:false});
+const fresh=()=>({binder:[],cardSeq:0,hood:{},ground:[],bag:8,intro:{step:0},glimpse:{},money:0,earned:0,day:1,size:3,seeds:{daisy:3},items:{},loot:{},grid:Array(25).fill(null),log:[],reg:{},nextId:1,seen:{},last:null,requests:[],reqId:1,done:0,trophies:{},got:{},cafe:[],custId:1,hearts:{},acorns:{},exam:{done:{},lock:{}},today:{},hints:{},talkLock:{},park:[],evid:{},lessons:{},judged:{compare:0,trend:0},quests:[],questCool:{},callLog:[],qid:0,shiny:{},decor:[],ribbons:[],guess:null,guessStreak:0,lastGuess:null,special:null,custom:[],cid:0,photos:{},madeCustom:false});
 function load(){try{const r=localStorage.getItem(KEY);if(r){return Object.assign(fresh(),JSON.parse(r));}}catch(e){}return fresh();}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function save(){if(window.__resetting) return;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 let S=load();
 const ui={tab:'garden',tool:null,sel:null,hover:null,cafe:'log',sort:{col:'day',dir:-1},fAnimal:'all',fCat:'all',
   tw:{animal:'',trait:'height',cut:24,color:'red',measure:'count'},sc:{x:'height',y:'all'},line:{m:0,b:0,best:false},confirmReset:false};
@@ -6062,7 +6062,7 @@ const withoutKits=f=>function(...a){const saved=S.binder;S.binder=saved.filter(k
 tradeTableBody=withoutKits(tradeTableBody);SHEETS.sell[2]=tradeTableBody;
 posterPickBody=withoutKits(posterPickBody);SHEETS.posterpick[2]=posterPickBody;
 tradePickBody=withoutKits(tradePickBody);SHEETS.tradepick[2]=tradePickBody;
-const ORIGIN=k=>k.kit?'🔬 kit':k.owner||HOOD_NAME[k.from]?`🏡 from ${HOOD_NAME[k.owner||k.from]}`:k.from==='woods'?'🌲 Deep Woods':k.from==='shop'||k.from==='trade'?'🔁 traded':'🪴 dug up';
+const ORIGIN=k=>k.kit?'🔬 kit':k.owner||HOOD_NAME[k.from]?`🏡 from ${HOOD_NAME[k.owner||k.from]}`:k.from==='woods'?'🌲 Deep Woods':k.from==='gift'?'🎁 reward':k.from==='shop'||k.from==='trade'?'🔁 traded':'🪴 dug up';
 const _bagO=bagBody;
 bagBody=function(){let h=_bagO();
   S.binder.forEach(k=>{h=h.replace(`data-act="binderOpen" data-c="${k.cid}">`,`data-act="binderOpen" data-c="${k.cid}"><span class="otag">${ORIGIN(k)}</span>`);});
@@ -6378,10 +6378,8 @@ function freshCard(opts){opts=opts||{};const pool=opts.peek?SEEDS.filter(s=>!see
   if(opts.shinyChance&&Math.random()<opts.shinyChance){c.rarity='shiny';c.shiny=true;}
   S.binder.push(c);return c;}
 const cardName=c=>`${c.rarity==='shiny'?'✦ shiny ':c.rarity==='rare'?'★ rare ':''}${SD[c.seed].name} card`;
-function payout(n){const got=[],k=COMMON_LOOT[Math.floor(Math.random()*COMMON_LOOT.length)],g=Math.max(1,Math.min(6,Math.round(n/3)));giftAdd(k,g);got.push(`${g} ${LOOT[k].emoji}`);
-  if(n>=10) got.push('a '+cardName(freshCard()));
+function payout(n){const got=[];if(n<6) return got;const k=COMMON_LOOT[Math.floor(Math.random()*COMMON_LOOT.length)],g=Math.max(1,Math.min(6,Math.round(n/4)));giftAdd(k,g);got.push(`${g} ${LOOT[k].emoji}`);
   if(n>=30){const t=['height','scent','bloom'][Math.floor(Math.random()*3)];S.ferts[t]=(S.ferts[t]||0)+1;got.push(fertLabel(t));}
-  if(n>=60) got.push('a '+cardName(freshCard({peek:true}))+' (new to you!)');
   return got;}
 moneyToGrow=function(){if(S.money>0){const n=S.money;S.money=0;payQ=payQ.concat(payout(n));save();clearTimeout(moneyToGrow.t);moneyToGrow.t=setTimeout(()=>{if(payQ.length){toast('🎁 Reward: '+payQ.join(', ')+'!');payQ=[];}},350);}else if(S.money<0) S.money=0;S.grow=0;
   const p=$('moneyPill');if(p){const f=S.ferts||{},t=`🧪<span>${(f.height||0)+(f.scent||0)+(f.bloom||0)}</span>`;if(p.innerHTML!==t){p.innerHTML=t;p.title=`Fertilizer: 📏 ${f.height||0} · 👃 ${f.scent||0} · 🌼 ${f.bloom||0}`;p.style.cursor='pointer';p.onclick=()=>{openSheet('bag');render();};}}};
@@ -6500,6 +6498,9 @@ function roomDecor(){const G=window.__upG;if(!G||typeof THREE==='undefined') ret
 /* ============ CLEAN CUTOUTS: no white sticker outlines around sparkles or faint shadows ============ */
 const _svgTexC=svgTexture;
 svgTexture=function(svg,w,h,outline){if(outline&&typeof svg==='string') svg=svg.replace(/<path class="twinkle"[^>]*\/>/g,'').replace(/<ellipse\b[^>]*fill="rgba\([^)]*\)"[^>]*\/>/g,'');return _svgTexC(svg,w,h,outline);};
+/* nothing counts as a chore before you've left your bedroom on day one (Grandpa's daisies are planted for you) */
+markTask=(function(f){return function(k){if(S.intro&&S.intro.step<1) return;return f(k);};})(markTask);
+musicTick=(function(f){return function(){try{if(typeof MUSIC!=='undefined'&&(!MUSIC.out||!MUSIC.ctx||MUSIC.ctx.state==='closed')) return;return f();}catch(e){}};})(musicTick);
 /* ============ NO POP-IN WHEN TURNING: cull sprites by their real middle, not their base ============ */
 (function(){if(!window.THREE||!THREE.Frustum) return;const sph=new THREE.Sphere();
   THREE.Frustum.prototype.intersectsSprite=function(sp){const e=sp.matrixWorld.elements,sx=Math.hypot(e[0],e[1],e[2]),sy=Math.hypot(e[4],e[5],e[6]),c=sp.center||{x:.5,y:.5};
@@ -6681,7 +6682,7 @@ function act(a,d){
   else if(a==='sound'){SOUND=!SOUND;try{localStorage.setItem('dataGarden_sound',SOUND?'1':'0');}catch(e){}sfx('boing');}
   else if(a==='reset'){
     if(!ui.confirmReset){ui.confirmReset=true;render();return;}
-    S=fresh();ensureRequests();ensureCafe();ui.tool=null;ui.sel=null;ui.sheet=null;ui.tab='garden';ui.confirmReset=false;ui.line={m:0,b:0,best:false};toast('Fresh start.');
+    try{localStorage.removeItem(KEY);}catch(e){}window.__resetting=true;try{if(typeof MUSIC!=='undefined'){MUSIC.on=false;MUSIC.ctx&&MUSIC.ctx.close();}}catch(e){}location.reload();return;
   }
   save(); render();
 }
